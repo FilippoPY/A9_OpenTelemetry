@@ -8,12 +8,17 @@ processors:
   batch:
 
 exporters:
-  file:
+  file/traces:
     path: /var/otel/traces.json
+    rotation:
+      max_megabytes: 5
+      max_backups: 1
+      max_age_days: 1
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [file]
+      exporters: [file/traces]
+
