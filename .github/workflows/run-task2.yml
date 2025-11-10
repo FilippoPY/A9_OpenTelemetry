@@ -1,0 +1,50 @@
+name: Run Task2 Advanced
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Task2_Advanced/**'
+
+jobs:
+  run-advanced:
+    runs-on: ubuntu-latest
+
+    services:
+      otel-collector:
+        image: otel/opentelemetry-collector:latest
+        ports:
+          - 4317:4317
+          - 4318:4318
+        # Montamos el config y una carpeta para que el collector escriba /var/otel/traces.json
+        volumes:
+          - ${{ github.workspace }}/Task2_Advanced/otel-collector-config.yaml:/etc/otel/config.yaml
+          - ${{ github.workspace }}/Task2_Advanced:/var/otel
+        command: ["--config", "/etc/otel/config.yaml"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          pip install -r Task2_Advanced/requirements.txt
+
+      - name: Send traces to Collector (OTLP gRPC)
+        run: |
+          python Task2_Advanced/app_sender.py
+
+      - name: Show traces.json preview
+        run: |
+          ls -la Task2_Advanced || true
+          head -n 60 Task2_Advanced/traces.json
+
+      - name: Upload traces.json as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: task2-traces
+          path: Task2_Advanced/traces.json
