@@ -20,8 +20,8 @@ jobs:
             -v ${{ github.workspace }}/Task3_Outstanding:/var/otel \
             -p 4317:4317 -p 4318:4318 \
             otel/opentelemetry-collector:latest
-          echo "Esperando 10 segundos..."
-          sleep 10
+          echo "Esperando 15 segundos para estabilizar..."
+          sleep 15
           docker ps
 
       - name: Setup Python
@@ -32,19 +32,24 @@ jobs:
       - name: Install dependencies
         run: pip install -r Task3_Outstanding/requirements.txt
 
-      - name: Send traces and logs
+      - name: Run Python app (traces + logs)
         run: python Task3_Outstanding/app_flask.py
 
-      - name: Wait and extract results from container
+      - name: Force flush and check inside container
         run: |
-          echo "Esperando escritura de archivos..."
-          sleep 5
-          docker cp otel-collector-task3:/var/otel/traces_task3.json Task3_Outstanding/traces_task3.json || echo "No traces file"
-          docker cp otel-collector-task3:/var/otel/logs_task3.json Task3_Outstanding/logs_task3.json || echo "No logs file"
-          echo "Vista previa de traces_task3.json:"
-          cat Task3_Outstanding/traces_task3.json || echo "❌ No traces found"
-          echo "Vista previa de logs_task3.json:"
-          cat Task3_Outstanding/logs_task3.json || echo "❌ No logs found"
+          echo "Listando archivos dentro del contenedor:"
+          docker exec otel-collector-task3 ls -la /var/otel || echo "No se pudo listar"
+          echo "Copiando archivos a la carpeta local..."
+          docker cp otel-collector-task3:/var/otel/. ${{ github.workspace }}/Task3_Outstanding/ || echo "No se pudo copiar"
+          echo "Contenido copiado:"
+          ls -la Task3_Outstanding || true
+
+      - name: Preview traces and logs
+        run: |
+          echo "=== TRACES TASK 3 ==="
+          cat Task3_Outstanding/traces_task3.json || echo "❌ No traces file"
+          echo "=== LOGS TASK 3 ==="
+          cat Task3_Outstanding/logs_task3.json || echo "❌ No logs file"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
