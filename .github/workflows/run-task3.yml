@@ -1,0 +1,59 @@
+name: Run Task3 Outstanding
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Task3_Outstanding/**'
+
+jobs:
+  run-outstanding:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start OpenTelemetry Collector (background)
+        run: |
+          docker run -d --name otel-collector-task3 \
+            -v ${{ github.workspace }}/Task3_Outstanding/otel-collector-config.yaml:/etc/otelcol/config.yaml \
+            -v ${{ github.workspace }}/Task3_Outstanding:/var/otel \
+            -p 4317:4317 -p 4318:4318 \
+            otel/opentelemetry-collector:latest
+          echo "Esperando 10 segundos..."
+          sleep 10
+          docker ps
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r Task3_Outstanding/requirements.txt
+
+      - name: Send traces and logs
+        run: python Task3_Outstanding/app_flask.py
+
+      - name: Wait and extract results from container
+        run: |
+          echo "Esperando escritura de archivos..."
+          sleep 5
+          docker cp otel-collector-task3:/var/otel/traces_task3.json Task3_Outstanding/traces_task3.json || echo "No traces file"
+          docker cp otel-collector-task3:/var/otel/logs_task3.json Task3_Outstanding/logs_task3.json || echo "No logs file"
+          echo "Vista previa de traces_task3.json:"
+          cat Task3_Outstanding/traces_task3.json || echo "❌ No traces found"
+          echo "Vista previa de logs_task3.json:"
+          cat Task3_Outstanding/logs_task3.json || echo "❌ No logs found"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: task3-results
+          path: |
+            Task3_Outstanding/traces_task3.json
+            Task3_Outstanding/logs_task3.json
+
+      - name: Stop and remove Collector
+        if: always()
+        run: docker rm -f otel-collector-task3 || true
