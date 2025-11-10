@@ -5,10 +5,10 @@ receivers:
       http:
 
 processors:
-  batch: {}
+  batch:
 
 exporters:
-  file/traces_file:
+  file:
     path: /var/otel/traces.json
 
 service:
@@ -16,4 +16,4 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [file/traces_file]
+      exporters: [file]
