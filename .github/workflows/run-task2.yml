@@ -10,26 +10,16 @@ jobs:
   run-advanced:
     runs-on: ubuntu-latest
 
-    services:
-      otel-collector:
-        image: otel/opentelemetry-collector:latest
-        ports:
-          - 4317:4317
-          - 4318:4318
-        # Montamos tu config y carpeta de salida
-        volumes:
-          - ${{ github.workspace }}/Task2_Advanced/otel-collector-config.yaml:/etc/otelcol/config.yaml
-          - ${{ github.workspace }}/Task2_Advanced:/var/otel
-        options: --name otel-collector
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Wait for Collector to be ready
+      - name: Start OpenTelemetry Collector
         run: |
-          echo "Esperando 10 segundos a que el collector arranque..."
-          sleep 10
-          docker ps
+          docker run -d --name otel-collector \
+            -v ${{ github.workspace }}/Task2_Advanced/otel-collector-config.yaml:/etc/otelcol/config.yaml \
+            -v ${{ github.workspace }}/Task2_Advanced:/var/otel \
+            -p 4317:4317 -p 4318:4318 \
+            otel/opentelemetry-collector:latest
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -38,6 +28,26 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r Task2_Advanced/requirement_
+          pip install -r Task2_Advanced/requirements.txt
+
+      - name: Wait for Collector to be ready
+        run: sleep 10
+
+      - name: Send traces to Collector (OTLP gRPC)
+        run: python Task2_Advanced/app_sender.py
+
+      - name: Show traces.json preview
+        run: |
+          echo "📂 Files in Task2_Advanced:"
+          ls -la Task2_Advanced || true
+          echo "🧩 Preview of traces.json:"
+          cat Task2_Advanced/traces.json || echo "❌ traces.json not found"
+
+      - name: Upload traces.json as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: task2-traces
+          path: Task2_Advanced/traces.json
+
 
 
