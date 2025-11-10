@@ -1,0 +1,23 @@
+name: Run Task1 Basic
+
+on:
+  workflow_dispatch:   # te permite correrlo manualmente desde Actions
+  push:
+    paths:
+      - 'Task1_Basic/**'
+
+jobs:
+  run-basic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          pip install -r Task1_Basic/requirements.txt
+      - name: Run OpenTelemetry app
+        run: |
+          python Task1_Basic/app.py
