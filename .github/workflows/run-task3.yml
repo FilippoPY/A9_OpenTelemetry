@@ -15,13 +15,12 @@ jobs:
 
       - name: Start OpenTelemetry Collector (background)
         run: |
-          docker run -d --name otel-collector-task3 \
+          docker run -d --name otel-collector \
             -v ${{ github.workspace }}/Task3_Outstanding/otel-collector-config.yaml:/etc/otelcol/config.yaml \
-            -v ${{ github.workspace }}/Task3_Outstanding:/var/otel \
             -p 4317:4317 -p 4318:4318 \
             otel/opentelemetry-collector:latest
-          echo "Esperando 15 segundos para estabilizar..."
-          sleep 15
+          echo "Esperando 10 segundos..."
+          sleep 10
           docker ps
 
       - name: Setup Python
@@ -32,33 +31,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r Task3_Outstanding/requirements.txt
 
-      - name: Run Python app (traces + logs)
+      - name: Run app (send traces and logs)
         run: python Task3_Outstanding/app_flask.py
 
-      - name: Force flush and check inside container
+      - name: Show collector logs (traces + logs)
         run: |
-          echo "Listando archivos dentro del contenedor:"
-          docker exec otel-collector-task3 ls -la /var/otel || echo "No se pudo listar"
-          echo "Copiando archivos a la carpeta local..."
-          docker cp otel-collector-task3:/var/otel/. ${{ github.workspace }}/Task3_Outstanding/ || echo "No se pudo copiar"
-          echo "Contenido copiado:"
-          ls -la Task3_Outstanding || true
-
-      - name: Preview traces and logs
-        run: |
-          echo "=== TRACES TASK 3 ==="
-          cat Task3_Outstanding/traces_task3.json || echo "❌ No traces file"
-          echo "=== LOGS TASK 3 ==="
-          cat Task3_Outstanding/logs_task3.json || echo "❌ No logs file"
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: task3-results
-          path: |
-            Task3_Outstanding/traces_task3.json
-            Task3_Outstanding/logs_task3.json
+          echo "=== Collector stdout (debug exporter) ==="
+          docker logs otel-collector --tail=500
 
       - name: Stop and remove Collector
         if: always()
-        run: docker rm -f otel-collector-task3 || true
+        run: docker rm -f otel-collector || true
