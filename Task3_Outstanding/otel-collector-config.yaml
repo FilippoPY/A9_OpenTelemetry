@@ -8,18 +8,18 @@ processors:
   batch:
 
 exporters:
-  file/traces:
-    path: /var/otel/traces_task3.json
-  file/logs:
-    path: /var/otel/logs_task3.json
+  debug/traces:
+    verbosity: detailed
+  debug/logs:
+    verbosity: detailed
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [file/traces]
+      exporters: [debug/traces]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [file/logs]
+      exporters: [debug/logs]
