@@ -8,14 +8,14 @@ processors:
   batch:
 
 exporters:
-  logging/traces_log:
-    loglevel: debug   # imprime spans en stdout del contenedor
+  debug:
+    verbosity: detailed   # muestra spans y atributos en la consola
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [logging/traces_log]
+      exporters: [debug]
 
 
