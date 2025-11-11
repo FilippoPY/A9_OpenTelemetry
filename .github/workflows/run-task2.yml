@@ -17,7 +17,6 @@ jobs:
         run: |
           docker run -d --name otel-collector \
             -v ${{ github.workspace }}/Task2_Advanced/otel-collector-config.yaml:/etc/otelcol/config.yaml \
-            -v ${{ github.workspace }}/Task2_Advanced:/var/otel \
             -p 4317:4317 -p 4318:4318 \
             otel/opentelemetry-collector:latest
           echo "Esperando 10 segundos..."
@@ -35,19 +34,15 @@ jobs:
       - name: Send traces to Collector (OTLP gRPC)
         run: python Task2_Advanced/app_sender.py
 
-      - name: Wait and extract traces.json from container
+      - name: Show collector logs (should include spans)
         run: |
-          echo "Esperando al Collector para terminar escritura..."
-          sleep 5
-          docker cp otel-collector:/var/otel/traces.json Task2_Advanced/traces.json || echo "No se pudo copiar traces.json"
-          echo "Vista previa de traces.json:"
-          cat Task2_Advanced/traces.json || echo "❌ No existe el archivo aún"
+          echo "=== Collector stdout (logging exporter) ==="
+          docker logs otel-collector --tail=500
 
-      - name: Upload traces.json as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: task2-traces
-          path: Task2_Advanced/traces._
+      - name: Stop and remove Collector
+        if: always()
+        run: docker rm -f otel-collector || true
+
 
 
 
